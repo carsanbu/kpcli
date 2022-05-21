@@ -19,6 +19,7 @@ from kpcli.utils import (
     inputTimeOutHandler,
     InputTimedOut,
 )
+from kpcli.entries import Entry, Entries
 
 logger = logging.getLogger(__name__)
 app = typer.Typer()
@@ -121,6 +122,7 @@ def list_groups_and_entries(
         None, "--group", "-g", help="Group name (partial allowed)"
     ),
     entries: bool = typer.Option(False, "--entries", "-e", help="Also list entries"),
+    list_format: bool = typer.Option(False, "--list", "-l", help="Also list entries in list format"),
 ):
     """
     List groups and entries
@@ -135,6 +137,18 @@ def list_groups_and_entries(
         for group_name in group_names:
             entry_names = "\n".join(ctx_connector(ctx).list_group_entries(group_name))
             echo_banner(f"{group_name}", fg=typer.colors.GREEN)
+            typer.echo(entry_names)
+    elif list_format:
+        entry_list = []
+        for group_name in group_names:
+            for entry_name in ctx_connector(ctx).list_group_entries(group_name):
+                entry = Entry(entry_name, group_name)
+                entry_list.append(entry)
+        entries = Entries(entry_list)
+        for entry in entries:
+            entry_names = "{group_name:{group_col_size}}{entry}".format(
+                entry=entry.name, group_name=entry.group,
+                group_col_size=entries.group_max_size()+1)
             typer.echo(entry_names)
     else:
         group_names = "\n".join(group_names)
