@@ -17,6 +17,7 @@ pyperclip = "^1.8.1"
 tableformatter = "^0.1.5"
 attrs = "^20.3.0"
 cryptography = "^3.4.6"
+pyfzf = "^0.3.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.1"

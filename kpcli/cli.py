@@ -20,6 +20,7 @@ from kpcli.utils import (
     InputTimedOut,
 )
 from kpcli.entries import Entry, Entries
+from kpcli.search import Search
 
 logger = logging.getLogger(__name__)
 app = typer.Typer()
@@ -114,6 +115,13 @@ def ctx_connector(ctx: typer.Context):
     """Helper function to retrieve KpDatabaseConnector set on context"""
     return ctx.obj.connector
 
+def entry_list(ctx, group_names):
+    entry_list = []
+    for group_name in group_names:
+        for entry_name in ctx_connector(ctx).list_group_entries(group_name):
+            entry = Entry(entry_name, group_name)
+            entry_list.append(entry)
+    return entry_list
 
 @app.command("ls")
 def list_groups_and_entries(
@@ -139,12 +147,7 @@ def list_groups_and_entries(
             echo_banner(f"{group_name}", fg=typer.colors.GREEN)
             typer.echo(entry_names)
     elif list_format:
-        entry_list = []
-        for group_name in group_names:
-            for entry_name in ctx_connector(ctx).list_group_entries(group_name):
-                entry = Entry(entry_name, group_name)
-                entry_list.append(entry)
-        entries = Entries(entry_list)
+        entries = Entries(entry_list(ctx, group_names))
         for entry in entries:
             entry_names = "{group_name:{group_col_size}}{entry}".format(
                 entry=entry.name, group_name=entry.group,
@@ -155,6 +158,13 @@ def list_groups_and_entries(
         echo_banner("Groups", fg=typer.colors.GREEN)
         typer.echo(group_names)
 
+@app.command("search")
+def search_an_entry(
+    ctx: typer.Context
+):
+    group_names = ctx_connector(ctx).list_group_names()
+    selected = Search(entry_list(ctx, group_names)).select()
+    typer.echo(selected)
 
 @app.command("add-group")
 def add_group(

@@ -1,8 +1,9 @@
-
 class Entry:
     def __init__(self, name, group):
         self.name = name
         self.group = group
+    def __str__(self):
+        return self.name
 
 class Entries:
     def __init__(self, entry_list):
