@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#search!/usr/bin/env python3
 # standards
 import logging
 import signal
@@ -158,13 +158,14 @@ def list_groups_and_entries(
         echo_banner("Groups", fg=typer.colors.GREEN)
         typer.echo(group_names)
 
-@app.command("search")
+@app.command("tui")
 def search_an_entry(
     ctx: typer.Context
 ):
     group_names = ctx_connector(ctx).list_group_names()
     selected = Search(entry_list(ctx, group_names)).select()
-    typer.echo(selected)
+    entry = get_or_prompt_single_entry(ctx, selected[0])
+    print_entry_details(ctx, entry, False)
 
 @app.command("add-group")
 def add_group(
@@ -229,6 +230,10 @@ def add_entry(
         f"{group.name}/{title}\nUsername {username}\nPassword {'*' * len(password)}\nURL: {url}\nNotes: {notes}"
     )
 
+def print_entry_details(ctx, entry, show_password):
+    details = ctx_connector(ctx).get_details(entry, show_password)
+    echo_banner(details["name"])
+    typer.echo("\n".join([f"{field}: {value}" for field, value in details.items()]))
 
 @app.command("get")
 def get_entry(
@@ -249,9 +254,7 @@ def get_entry(
         typer.echo("No matching entry found")
         raise typer.Exit()
     for entry in entries:
-        details = ctx_connector(ctx).get_details(entry, show_password)
-        echo_banner(details["name"])
-        typer.echo("\n".join([f"{field}: {value}" for field, value in details.items()]))
+        print_entry_details(ctx, entry, show_password)
 
 
 def get_or_prompt_single_entry(ctx: typer.Context, name):
@@ -276,25 +279,13 @@ def get_or_prompt_single_entry(ctx: typer.Context, name):
     else:
         return entries[0]
 
-
-@app.command("cp")
-def copy_entry_attribute(
-    ctx: typer.Context,
-    name: str = typer.Argument(..., help="group/title (or part thereof) of entry"),
-    item: CopyOption = typer.Argument(CopyOption.password, help="Attribute to copy"),
-):
-    """
-    Copy entry attribute to clipboard (username, password, url, notes)
-    Password is kept on clipboard until user confirms, or timeout is reached (5 seconds by default)
-    """
-    entry = get_or_prompt_single_entry(ctx, name)
+def copy_to_clipboard(ctx, typer, entry, item):
     typer.echo(f"Entry: {entry.group.name}/{entry.title}")
     try:
         ctx_connector(ctx).copy_to_clipboard(entry, str(item))
     except ValueError as e:
         typer.secho(str(e), fg=typer.colors.RED)
         raise typer.Exit()
-
     if item == CopyOption.password:
         # Clear the clipboard after a timeout unless the user indicates they're done with it earlier
         timeout = ctx.obj.paste_timeout
@@ -322,6 +313,18 @@ def copy_entry_attribute(
     else:
         typer.secho(f"{str(item)} copied to clipboard", fg=typer.colors.GREEN)
 
+@app.command("cp")
+def copy_entry_attribute(
+    ctx: typer.Context,
+    name: str = typer.Argument(..., help="group/title (or part thereof) of entry"),
+    item: CopyOption = typer.Argument(CopyOption.password, help="Attribute to copy"),
+):
+    """
+    Copy entry attribute to clipboard (username, password, url, notes)
+    Password is kept on clipboard until user confirms, or timeout is reached (5 seconds by default)
+    """
+    entry = get_or_prompt_single_entry(ctx, name)
+    copy_to_clipboard(ctx, typer, entry, item)
 
 @app.command("edit")
 def edit_entry(
