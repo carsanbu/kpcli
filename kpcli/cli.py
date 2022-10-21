@@ -21,11 +21,11 @@ from kpcli.utils import (
 )
 from kpcli.entries import Entry, Entries
 from kpcli.search import Search
+from kpcli.entry_options import EntryOptions
 
 logger = logging.getLogger(__name__)
 app = typer.Typer()
 signal.signal(signal.SIGALRM, inputTimeOutHandler)
-
 
 ############
 # VALIDATORS
@@ -166,6 +166,7 @@ def search_an_entry(
     selected = Search(entry_list(ctx, group_names)).select()
     entry = get_or_prompt_single_entry(ctx, selected[0])
     print_entry_details(ctx, entry, False)
+    EntryOptions(typer).show()
 
 @app.command("add-group")
 def add_group(
@@ -279,7 +280,7 @@ def get_or_prompt_single_entry(ctx: typer.Context, name):
     else:
         return entries[0]
 
-def copy_to_clipboard(ctx, typer, entry, item):
+def copy_to_clipboard(ctx, entry, item):
     typer.echo(f"Entry: {entry.group.name}/{entry.title}")
     try:
         ctx_connector(ctx).copy_to_clipboard(entry, str(item))
@@ -324,7 +325,7 @@ def copy_entry_attribute(
     Password is kept on clipboard until user confirms, or timeout is reached (5 seconds by default)
     """
     entry = get_or_prompt_single_entry(ctx, name)
-    copy_to_clipboard(ctx, typer, entry, item)
+    copy_to_clipboard(ctx, entry, item)
 
 @app.command("edit")
 def edit_entry(
